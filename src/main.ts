@@ -1,37 +1,32 @@
 import {
-	App,
 	Editor,
 	Notice,
 	Plugin,
-	PluginSettingTab,
-	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
-
-interface AiAssistantSettings {
-	mySetting: string;
-	apiKey: string;
-	modelName: string;
-	maxTokens: number;
-	replaceSelection: boolean;
-	imgFolder: string;
-	language: string;
-}
+import AiAssistantSettingTab, {AiAssistantSettings} from './AiAssistantSettings'
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
-	mySetting: "default",
 	apiKey: "",
 	modelName: "gpt-3.5-turbo",
 	maxTokens: 500,
 	replaceSelection: true,
+	alwaysShowPromptWithAnswer : false,
+	// Chat Behaviour
+	alwaysSaveChatHistory : true,
+	chatHistoryPath : "/ai/history/",
+	chatHistoryTemplate :  "",
 	imgFolder: "AiAssistant/Assets",
 	language: "",
 };
 
+
+
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
 	openai: OpenAI;
+	isQuerying : Boolean;
 
 	build_api() {
 		this.openai = new OpenAI(
@@ -39,6 +34,102 @@ export default class AiAssistantPlugin extends Plugin {
 			this.settings.modelName,
 			this.settings.maxTokens
 		);
+	}
+	togglePrompt(){
+		let wrapper = this.app.workspace.getLeaf().view.containerEl.find('.ai-assistant__wrapper')
+		if (wrapper) {
+			wrapper.detach();
+		}else {
+
+			this.showPrompt()
+		}
+	}
+	showPrompt(){
+		const activeLeaf = this.app.workspace.getLeaf();
+		if (activeLeaf.view.containerEl.find('.ai-assistant__wrapper')) return;
+		const wrapper = document.createElement('div')
+		wrapper.addClass('ai-assistant__wrapper')
+		const inputRow = wrapper.createDiv('input-row');
+		const sendRow = wrapper.createDiv('send-row');
+		const cell = sendRow.createDiv();
+
+		const input = inputRow.createEl('textarea');
+		input.setAttrs({
+			rows : 5,
+			autogrow : true
+		})
+		input.addEventListener('keyup',(event) => {
+			console.log(`${event.key}`, {event})
+			
+			if (event.key === 'Enter' && event.ctrlKey) {
+				event.preventDefault();
+				button.disabled = true;
+				input.disabled = true;
+				this.promptAIAPI(input.value).then((answer) => {
+					let template = ``;
+					if (this.settings.alwaysShowPromptWithAnswer) {
+						template = `Prompt: ${answer.prompt}\n Answer: ${answer.answer}`
+					} else {
+						template = answer.answer
+					}
+					this.app.workspace.activeEditor?.editor?.replaceSelection(template)
+					wrapper.detach();
+					
+				}).catch(err => {
+					new Notice("Querying Failed")
+					button.disabled = false;
+					input.disabled = false;
+				})
+			}
+		})
+		const button = cell.createEl('button');
+		button.innerText = "Send"
+		button.addEventListener('click',() => {
+			button.disabled = true;
+			input.disabled = true;
+			this.promptAIAPI(input.value).then((answer) => {
+				let template = ``;
+				if (this.settings.alwaysShowPromptWithAnswer) {
+					template = `Prompt: ${answer.prompt}\n Answer: ${answer.answer}`
+				} else {
+					template = answer.answer
+				}
+				this.app.workspace.activeEditor?.editor?.replaceSelection(template)
+				wrapper.detach();
+				
+			}).catch((err) => {
+				new Notice('Quering Failed')
+				input.disabled = false;
+				button.disabled = false; 
+			})
+		})
+		activeLeaf.view.containerEl.append(wrapper);
+		
+		input.focus();
+	}
+
+
+
+	
+	async promptAIAPI(prompt : string) {
+		const result = new Notice('Querying ChatGPT...',  50000);
+		
+		this.isQuerying = true;
+		let answer = await this.openai.api_call([
+			{
+				role: "user",
+				content: prompt
+			},
+		]);
+		result.hide();
+		this.isQuerying = false;
+		answer = answer!;
+
+		return {
+			prompt,
+			answer
+		}
+
 	}
 
 	async onload() {
@@ -49,7 +140,10 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "chat-mode",
 			name: "Open Assistant Chat",
 			callback: () => {
-				new ChatModal(this.app, this.openai).open();
+				
+				this.togglePrompt();
+
+				// new ChatModal(this.app, this.openai).open();
 			},
 		});
 
@@ -57,6 +151,7 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
 			editorCallback: async (editor: Editor) => {
+				
 				const selected_text = editor.getSelection().toString().trim();
 				new PromptModal(
 					this.app,
@@ -124,7 +219,9 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addSettingTab(new AiAssistantSettingTab(this.app, this));
 	}
 
-	onunload() {}
+	onunload() {
+		this.app.workspace.getLeaf().view.containerEl.find('.ai-assistant__wrapper')?.detach();
+	}
 
 	async loadSettings() {
 		this.settings = Object.assign(
@@ -136,116 +233,5 @@ export default class AiAssistantPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class AiAssistantSettingTab extends PluginSettingTab {
-	plugin: AiAssistantPlugin;
-
-	constructor(app: App, plugin: AiAssistantPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-		containerEl.createEl("h2", { text: "Settings for my AI assistant." });
-
-		new Setting(containerEl)
-			.setName("API Key")
-			.setDesc("OpenAI API Key")
-			.addText((text) =>
-				text
-					.setPlaceholder("Enter your key here")
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
-						await this.plugin.saveSettings();
-						this.plugin.build_api();
-					})
-			);
-		containerEl.createEl("h3", { text: "Text Assistant" });
-
-		new Setting(containerEl)
-			.setName("Model Name")
-			.setDesc("Select your model")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOptions({
-						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"gpt-4": "gpt-4",
-					})
-					.setValue(this.plugin.settings.modelName)
-					.onChange(async (value) => {
-						this.plugin.settings.modelName = value;
-						await this.plugin.saveSettings();
-						this.plugin.build_api();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Max Tokens")
-			.setDesc("Select max number of generated tokens")
-			.addText((text) =>
-				text
-					.setPlaceholder("Max tokens")
-					.setValue(this.plugin.settings.maxTokens.toString())
-					.onChange(async (value) => {
-						const int_value = parseInt(value);
-						if (!int_value || int_value <= 0) {
-							new Notice("Error while parsing maxTokens ");
-						} else {
-							this.plugin.settings.maxTokens = int_value;
-							await this.plugin.saveSettings();
-							this.plugin.build_api();
-						}
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Prompt behavior")
-			.setDesc("Replace selection")
-			.addToggle((toogle) => {
-				toogle
-					.setValue(this.plugin.settings.replaceSelection)
-					.onChange(async (value) => {
-						this.plugin.settings.replaceSelection = value;
-						await this.plugin.saveSettings();
-						this.plugin.build_api();
-					});
-			});
-		containerEl.createEl("h3", { text: "Image Assistant" });
-		new Setting(containerEl)
-			.setName("Default location for generated images")
-			.setDesc("Where generated images are stored.")
-			.addText((text) =>
-				text
-					.setPlaceholder("Enter the path to you image folder")
-					.setValue(this.plugin.settings.imgFolder)
-					.onChange(async (value) => {
-						const path = value.replace(/\/+$/, "");
-						if (path) {
-							this.plugin.settings.imgFolder = path;
-							await this.plugin.saveSettings();
-						} else {
-							new Notice("Image folder cannot be empty");
-						}
-					})
-			);
-
-		containerEl.createEl("h3", { text: "Speech to Text" });
-		new Setting(containerEl)
-			.setName("The language of the input audio")
-			.setDesc("Using ISO-639-1 format (en, fr, de, ...)")
-			.addText((text) =>
-				text
-					.setValue(this.plugin.settings.language)
-					.onChange(async (value) => {
-						this.plugin.settings.language = value;
-						await this.plugin.saveSettings();
-					})
-			);
 	}
 }
