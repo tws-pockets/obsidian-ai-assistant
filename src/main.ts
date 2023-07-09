@@ -6,6 +6,7 @@ import {
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
 import AiAssistantSettingTab, {AiAssistantSettings} from './AiAssistantSettings'
+import { ChatView } from "./ChatView";
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
 	apiKey: "",
@@ -108,7 +109,9 @@ export default class AiAssistantPlugin extends Plugin {
 		input.focus();
 	}
 
+	showChatView(){
 
+	}
 
 	
 	async promptAIAPI(prompt : string) {
@@ -135,13 +138,17 @@ export default class AiAssistantPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.build_api();
+    this.registerView(
+      'ai-chat-view',
+      (leaf) => new ChatView(leaf)
+    );
 
 		this.addCommand({
 			id: "chat-mode",
 			name: "Open Assistant Chat",
 			callback: () => {
+				this.activateView()
 				
-				this.togglePrompt();
 
 				// new ChatModal(this.app, this.openai).open();
 			},
@@ -150,30 +157,34 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addCommand({
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
-			editorCallback: async (editor: Editor) => {
+			callback : () => {
 				
-				const selected_text = editor.getSelection().toString().trim();
-				new PromptModal(
-					this.app,
-					async (x: { [key: string]: string }) => {
-						let answer = await this.openai.api_call([
-							{
-								role: "user",
-								content:
-									x["prompt_text"] + " : " + selected_text,
-							},
-						]);
-						answer = answer!;
-						if (!this.settings.replaceSelection) {
-							answer = selected_text + "\n" + answer.trim();
-						}
-						if (answer) {
-							editor.replaceSelection(answer.trim());
-						}
-					},
-					false
-				).open();
-			},
+				this.togglePrompt();
+			}
+			// editorCallback: async (editor: Editor) => {
+				
+			// 	const selected_text = editor.getSelection().toString().trim();
+			// 	new PromptModal(
+			// 		this.app,
+			// 		async (x: { [key: string]: string }) => {
+			// 			let answer = await this.openai.api_call([
+			// 				{
+			// 					role: "user",
+			// 					content:
+			// 						x["prompt_text"] + " : " + selected_text,
+			// 				},
+			// 			]);
+			// 			answer = answer!;
+			// 			if (!this.settings.replaceSelection) {
+			// 				answer = selected_text + "\n" + answer.trim();
+			// 			}
+			// 			if (answer) {
+			// 				editor.replaceSelection(answer.trim());
+			// 			}
+			// 		},
+			// 		false
+			// 	).open();
+			// },
 		});
 
 		this.addCommand({
@@ -219,6 +230,20 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addSettingTab(new AiAssistantSettingTab(this.app, this));
 	}
 
+	
+
+	async activateView() {
+    this.app.workspace.detachLeavesOfType('ai-chat-view');
+
+    await this.app.workspace.getRightLeaf(false).setViewState({
+      type: 'ai-chat-view',
+      active: true,
+    });
+
+    this.app.workspace.revealLeaf(
+      this.app.workspace.getLeavesOfType('ai-chat-view')[0]
+    );
+  }
 	onunload() {
 		this.app.workspace.getLeaf().view.containerEl.find('.ai-assistant__wrapper')?.detach();
 	}

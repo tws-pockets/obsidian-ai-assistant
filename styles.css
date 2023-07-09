@@ -124,3 +124,81 @@
 		max-width:33vw;
 		min-width:10vw;
 	}
+
+
+	
+div.obsidian-ai-assistant {
+  
+	height:100%;
+	display: flex;
+	flex-flow: column wrap;
+  justify-content: space-between;
+	
+}
+
+
+div.obsidian-ai-assistant div.obsidian-ai-assistant__input-line {
+	display:flex;
+	flex-flow: row wrap;
+	width:auto;
+}
+div.obsidian-ai-assistant div.obsidian-ai-assistant__input-line textarea {
+	
+	resize:none;
+	width: 100%;
+}
+
+
+/* CSS for a messaging list with speech bubbles */
+
+ul{
+}
+
+
+/* Speech bubble styles */
+.obsidian-ai-assistant__history li {
+  display:inline-block;
+  clear: both;
+  padding: 20px;
+  border-radius: 5px;
+  margin-bottom: 2px;
+	font-family: Helvetica, Arial, sans-serif;
+	border-color: var(--background-modifier-border);
+	border-width: var(--border-width);
+	border-style: solid;
+}
+
+li.obsidian-ai-assistant__history__ai-response{
+	background:var(--background-secondary-alt);
+	border-color: var(--background-modifier-border-focus);
+	float: right;
+}
+
+li.obsidian-ai-assistant__history__prompt{
+	background: var(--background-primary);
+	float: left;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+}
+
+li.obsidian-ai-assistant__history__prompt + li.obsidian-ai-assistant__history__ai-response,
+li.obsidian-ai-assistant__history__ai-response + li.obsidian-ai-assistant__history__prompt{
+  margin-top:.5em;
+}
+
+
+li.obsidian-ai-assistant__history__prompt ~ li.obsidian-ai-assistant__history__prompt,
+li.obsidian-ai-assistant__history__prompt + li.obsidian-ai-assistant__history__prompt{
+	margin-top:0px;
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+}
+
+/* CSS for a messaging list with speech bubbles */
+
+/* Base styles */
+.obsidian-ai-assistant__history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
