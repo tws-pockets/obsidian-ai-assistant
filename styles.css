@@ -158,31 +158,31 @@ ul{
 
 
 /* Speech bubble styles */
-.obsidian-ai-assistant__history li.obsidian-ai-assistant__history__prompt div.timestamp {
+.obsidian-ai-assistant__history > li > div.timestamp > div {
 	display: flex;
-	flex-flow: row nowrap;
-	justify-content: end;
+	width:auto;
 }
-.obsidian-ai-assistant__history li.obsidian-ai-assistant__history__ai-response div.timestamp {
-	display: flex;
-	flex-flow: row nowrap;
-	justify-content: start;
-}
-.obsidian-ai-assistant__history li div.timestamp {
+.obsidian-ai-assistant__history > li > div.timestamp {
 	padding:5px;
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-between;
 	border-bottom: var(--border-width) solid var(--background-modifier-border)
 }
-.obsidian-ai-assistant__history li div:last-child {
+.obsidian-ai-assistant__history > li > div.markdown-wrapper  {
 	padding-right:20px;
 	padding-left:20px;
+	padding-bottom:20px;
+	padding-top:10px;
 
 }
-.obsidian-ai-assistant__history li {
+.obsidian-ai-assistant__history > li {
   display:flex;
 	flex-flow: column nowrap;
   clear: both;
   padding:0px;
 	min-width: 33%;
+	max-width: 48%;
   border-radius: 5px;
   margin-bottom: 2px;
 	font-family: Helvetica, Arial, sans-serif;

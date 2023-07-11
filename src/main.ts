@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	alwaysSaveChatHistory : true,
 	chatHistoryPath : "/ai/history/",
 	chatHistoryTemplate :  "",
+	sendOnEnter : false,
+	metaKey : "ctrlKey",
 	imgFolder: "AiAssistant/Assets",
 	language: "",
 };

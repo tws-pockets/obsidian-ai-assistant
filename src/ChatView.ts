@@ -69,24 +69,21 @@ export class ChatView extends ItemView {
 		const newEle = history.createEl('li',{ cls : 
 			`obsidian-ai-assistant__history__${type} obsidian-ai-assistant__history__line`
 	});
-		// newEle.append(history.createSpan({cls : "obsidian-ai-assistant__history__line__prefix" , text : prefix || `(${new Date().toLocaleTimeString()}): `}));
-		const h = new Date().getHours();
-		const m = new Date().getMinutes();
-		const strg = `${h < 10?'0':''}${h}:${m < 10?'0':''}${m}`
-		newEle.createEl('div',{cls : 'timestamp', text : strg});
-		const span = newEle.createEl('div');
-		newEle.addEventListener('dblclick', () => {new Notice('Copied Content to Clipboard'),navigator.clipboard.writeText(content)})
-		
-		const view = this.app.workspace.getActiveViewOfType(
-			MarkdownView
+	const h = new Date().getHours();
+	const m = new Date().getMinutes();
+	const timestamp = `${h < 10?'0':''}${h}:${m < 10?'0':''}${m}`
+	const header = newEle.createEl('div',{cls : 'timestamp'});
+	header.createEl('div',{text : timestamp, cls : ''})
+	header.createEl('div',{text : (type === 'prompt')?'Me':'AI', cls : 'name'})
+	
+	const div = newEle.createDiv('markdown-wrapper');
+	const view = this.app.workspace.getActiveViewOfType(
+		MarkdownView
 		) as MarkdownView;
 		
-		MarkdownRenderer.renderMarkdown(content, span, '', view);
-		// if (type === 'prompt') {
-		//   newEle.createSpan({text: prefix + content});
-		// } else {
-
-		// }
+		newEle.addEventListener('dblclick', () => {new Notice('Copied Content to Clipboard'),navigator.clipboard.writeText(div.innerHTML)})
+		MarkdownRenderer.renderMarkdown(content, div, '', view);
+		return newEle;
 	}
 	getPlugin(): AiAssistantPlugin {
 		return app.plugins.getPlugin("ai-assistant");
