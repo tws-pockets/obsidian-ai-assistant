@@ -128,10 +128,9 @@
 
 	
 div.obsidian-ai-assistant {
-  
 	height:100%;
 	display: flex;
-	flex-flow: column wrap;
+	flex-flow: column nowrap;
   justify-content: space-between;
 	
 }
@@ -139,13 +138,16 @@ div.obsidian-ai-assistant {
 
 div.obsidian-ai-assistant div.obsidian-ai-assistant__input-line {
 	display:flex;
-	flex-flow: row wrap;
-	width:auto;
+	flex-flow: row nowrap;
+	width:100%;
 }
 div.obsidian-ai-assistant div.obsidian-ai-assistant__input-line textarea {
-	
 	resize:none;
 	width: 100%;
+}
+div.obsidian-ai-assistant div.obsidian-ai-assistant__input-line button {
+	width:auto;
+	height:100%;
 }
 
 
@@ -156,10 +158,31 @@ ul{
 
 
 /* Speech bubble styles */
+.obsidian-ai-assistant__history li.obsidian-ai-assistant__history__prompt div.timestamp {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: end;
+}
+.obsidian-ai-assistant__history li.obsidian-ai-assistant__history__ai-response div.timestamp {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: start;
+}
+.obsidian-ai-assistant__history li div.timestamp {
+	padding:5px;
+	border-bottom: var(--border-width) solid var(--background-modifier-border)
+}
+.obsidian-ai-assistant__history li div:last-child {
+	padding-right:20px;
+	padding-left:20px;
+
+}
 .obsidian-ai-assistant__history li {
-  display:inline-block;
+  display:flex;
+	flex-flow: column nowrap;
   clear: both;
-  padding: 20px;
+  padding:0px;
+	min-width: 33%;
   border-radius: 5px;
   margin-bottom: 2px;
 	font-family: Helvetica, Arial, sans-serif;

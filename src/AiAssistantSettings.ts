@@ -20,6 +20,8 @@ export interface AiAssistantSettings {
 	alwaysSaveChatHistory : boolean;
 	chatHistoryPath : string; // should allow for yyyy-mm-dd/history
 	chatHistoryTemplate :  string; // should receive prompt and answer as vars
+	sendOnEnter : boolean;
+	metaKey : string;
 
 	// Image generation 
 	imgFolder: string;
@@ -175,7 +177,35 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 			
 		})
 		);
-		
+		new Setting(containerEl)
+			.setName("Send on Enter")
+			.setDesc("Send Message upon hitting enter, rather than <meta>+enter")
+			.addToggle(toggle => {
+				
+			toggle.setValue(this.plugin.settings.sendOnEnter);
+			toggle.onChange(async (state) => {
+				this.plugin.settings.sendOnEnter = state;
+				await this.plugin.saveSettings();
+			});
+
+		});
+		new Setting(containerEl)
+			.setName("Meta Key to Use with Enter")
+			.setDesc("Select the meta key to trigger sending the message to the API.")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions({
+						"altKey": "alt",
+						"ctrlKey": "ctrl",
+						"metaKey": "meta",
+						"shiftKey": "shift",
+					})
+					.setValue(this.plugin.settings.metaKey)
+					.onChange(async (value) => {
+						this.plugin.settings.metaKey = value;
+						await this.plugin.saveSettings();
+					})
+			);
 		/**
 		 * 
 		 * Image Assistant Options
