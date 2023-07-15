@@ -2,7 +2,11 @@ import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Configuration, OpenAIApi } = require("openai");
-
+export interface openAIHistory {
+	role: string;
+	content: string;
+	active : boolean;
+}
 class CustomFormData extends FormData {
 	getHeaders() {
 		return {};
@@ -44,7 +48,9 @@ export class OpenAI {
 					body: JSON.stringify({
 						model: this.modelName,
 						max_tokens: this.maxTokens,
-						messages: prompt_list,
+						messages: [
+							// {content : "Always reply in the form of a cursory obsidian note.", role : "user"},...prompt_list],
+						...prompt_list],
 						stream: streamMode,
 					}),
 				}

@@ -1,32 +1,34 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import AiAssistantPlugin from "./main";
+import { openAIHistory } from "./openai_api";
 
 /**
  * Settings Interface for this Plugin
- * 
+ *
  */
 export interface AiAssistantSettings {
-	// chatGPT options 
+	// chatGPT options
 	apiKey: string;
 	modelName: string;
 	maxTokens: number;
 	language: string;
 
-	// Prompt Behaviour 
+	// Prompt Behaviour
 	replaceSelection: boolean;
-	alwaysShowPromptWithAnswer : boolean;
+	alwaysShowPromptWithAnswer: boolean;
+	promptPrefix: Array<openAIHistory>;
 
 	// Chat Behaviour
-	alwaysSaveChatHistory : boolean;
-	chatHistoryPath : string; // should allow for yyyy-mm-dd/history
-	chatHistoryTemplate :  string; // should receive prompt and answer as vars
-	sendOnEnter : boolean;
-	metaKey : string;
+	alwaysSaveChatHistory: boolean;
+	chatHistoryPath: string; // should allow for yyyy-mm-dd/history
+	chatHistoryTemplate: string; // should receive prompt and answer as vars
+	chatPrefix: Array<openAIHistory>;
+	sendOnEnter: boolean;
+	metaKey: string;
 
-	// Image generation 
+	// Image generation
 	imgFolder: string;
 }
-
 
 export default class AiAssistantSettingTab extends PluginSettingTab {
 	plugin: AiAssistantPlugin;
@@ -41,9 +43,9 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl("h1", { text: "AI Assistant Settings" });
 		/**
-		 * 
-		 * API Options 
-		 * 
+		 *
+		 * API Options
+		 *
 		 */
 		containerEl.createEl("h3", { text: "API Options" });
 		new Setting(containerEl)
@@ -53,7 +55,7 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Enter your key here")
 					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value : string) => {
+					.onChange(async (value: string) => {
 						this.plugin.settings.apiKey = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
@@ -61,9 +63,9 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 			);
 
 		/**
-		 * 
-		 * Model Options 
-		 * 
+		 *
+		 * Model Options
+		 *
 		 */
 		containerEl.createEl("h3", { text: "Model Options" });
 		new Setting(containerEl)
@@ -101,11 +103,11 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 						}
 					})
 			);
-			
+
 		/**
-		 * 
+		 *
 		 * Prompt Behaviour
-		 * 
+		 *
 		 */
 		containerEl.createEl("h3", { text: "Prompt Behaviour" });
 
@@ -126,79 +128,144 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 			.setName("Show Prompt with answer")
 			.setDesc("If the prompt should be added to the note as well.")
 			.addToggle((toggle) => {
-				toggle.setValue(this.plugin.settings.alwaysShowPromptWithAnswer);
+				toggle.setValue(
+					this.plugin.settings.alwaysShowPromptWithAnswer
+				);
 				toggle.onChange(async (state) => {
-							this.plugin.settings.alwaysShowPromptWithAnswer = state;
-							await this.plugin.saveSettings();
+					this.plugin.settings.alwaysShowPromptWithAnswer = state;
+					await this.plugin.saveSettings();
+				});
+			});
+		const promptPrefix = new Setting(containerEl)
+			.setName("Prompt Prefix")
+			.setDesc("Set of Messages to put before every prompt.")
+			.addButton((button) => {
+				button.setIcon("plus-circle");
+				button.setClass('clickable-icon');
+				button.setClass('setting-editor-extra-setting-button')
+				button.onClick(async (click) => {
+					this.plugin.settings.promptPrefix.push({
+						content: "",
+						role: "user",
+					});
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			});
+
+		const prefixContainer = containerEl.createDiv();
+		// for each line in the history
+		this.plugin.settings.promptPrefix.forEach((ele, idx, arr) => {
+			// create a row
+			const row = prefixContainer.createDiv('history__line');
+			// create select option for role
+			const select = row.createDiv('history__line__role').createEl("select");
+			["user", "assistant", "system", "function"].forEach((option) => {
+				select.createEl("option", { text: option });
+			});
+			select.value = ele.role;
+			select.addEventListener('change',async () => {
+				this.plugins.settings.promptPrefix[idx].role = select.value;
+				await this.plugin.saveSettings();
+			});
+			// create text input for content
+			const text = row.createDiv('history__line__message').createEl('textarea');
+			text.value = ele.content;
+			text.addEventListener('change', async  () => {
+				this.plugin.settings.promptPrefix[idx].content = text.value;
+				await this.plugin.saveSettings();
+			});
+			// create delete button
+			const slider = row.createDiv();
+			new Setting(slider).addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.promptPrefix[idx].active)
+				toggle.onChange(async val =>{
+					this.plugin.settings.promptPrefix[idx].active = val;
+					await this.plugin.saveSettings();
+				})
+
+			})
+			const button = row.createDiv('history__line__delete');
+			new Setting(button).addButton(button => {
+				button.setIcon('delete');
+				button.setClass('clickable-icon');
+				button.setClass('setting-editor-extra-setting-button')
+				button.onClick(async (click) => {
+					console.log(`Deleting ${idx} from settings `, {arr : this.plugin.settings.promptPrefix})
+					this.plugin.settings.promptPrefix.splice(idx,1);
+					await this.plugin.saveSettings();
+					this.display();
 				});
 			})
-		
+		});
 		/**
-		 * 
+		 *
 		 * Chat Behavior
-		 * 
+		 *
 		 */
 		containerEl.createEl("h3", { text: "Chat Behaviour" });
 		new Setting(containerEl)
-		.setName("Store Chat History")
-		.setDesc("Wether to store the chat history with chatGPT in dedicated notes.")
-		.addToggle((toggle) => {
-			toggle.setValue(this.plugin.settings.alwaysSaveChatHistory);
-			toggle.onChange(async (state) => {
-				this.plugin.settings.alwaysSaveChatHistory = state;
-				await this.plugin.saveSettings();
+			.setName("Store Chat History")
+			.setDesc(
+				"Wether to store the chat history with chatGPT in dedicated notes."
+			)
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.alwaysSaveChatHistory);
+				toggle.onChange(async (state) => {
+					this.plugin.settings.alwaysSaveChatHistory = state;
+					await this.plugin.saveSettings();
+				});
 			});
-		})
 		new Setting(containerEl)
-		.setName("Chat History Location")
-		.setDesc("Folder in which to store the history.")
-		.addText((text) =>
-		text
-		.setPlaceholder("/ai/history/")
-		.setValue(this.plugin.settings.chatHistoryPath)
-		.onChange(async (value) => {
-			const path = value.replace(/\/+$/, "");
-			this.plugin.settings.chatHistoryPath = path;
-			await this.plugin.saveSettings();
-			
-		})
-		);
+			.setName("Chat History Location")
+			.setDesc("Folder in which to store the history.")
+			.addText((text) =>
+				text
+					.setPlaceholder("/ai/history/")
+					.setValue(this.plugin.settings.chatHistoryPath)
+					.onChange(async (value) => {
+						const path = value.replace(/\/+$/, "");
+						this.plugin.settings.chatHistoryPath = path;
+						await this.plugin.saveSettings();
+					})
+			);
 		new Setting(containerEl)
-		.setName("Chat Message Template")
-		.setDesc("Path to note template to use.")
-		.addText((text) =>
-		text
-		.setPlaceholder("/ai/history/")
-		.setValue(this.plugin.settings.chatHistoryPath)
-		.onChange(async (value) => {
-			const path = value.replace(/\/+$/, "");
-			this.plugin.settings.chatHistoryPath = path;
-			await this.plugin.saveSettings();
-			
-		})
-		);
+			.setName("Chat Message Template")
+			.setDesc("Path to note template to use.")
+			.addText((text) =>
+				text
+					.setPlaceholder("/ai/history/")
+					.setValue(this.plugin.settings.chatHistoryPath)
+					.onChange(async (value) => {
+						const path = value.replace(/\/+$/, "");
+						this.plugin.settings.chatHistoryPath = path;
+						await this.plugin.saveSettings();
+					})
+			);
 		new Setting(containerEl)
 			.setName("Send on Enter")
-			.setDesc("Send Message upon hitting enter, rather than <meta>+enter")
-			.addToggle(toggle => {
-				
-			toggle.setValue(this.plugin.settings.sendOnEnter);
-			toggle.onChange(async (state) => {
-				this.plugin.settings.sendOnEnter = state;
-				await this.plugin.saveSettings();
+			.setDesc(
+				"Send Message upon hitting enter, rather than <meta>+enter"
+			)
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.sendOnEnter);
+				toggle.onChange(async (state) => {
+					this.plugin.settings.sendOnEnter = state;
+					await this.plugin.saveSettings();
+				});
 			});
-
-		});
 		new Setting(containerEl)
 			.setName("Meta Key to Use with Enter")
-			.setDesc("Select the meta key to trigger sending the message to the API.")
+			.setDesc(
+				"Select the meta key to trigger sending the message to the API."
+			)
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
-						"altKey": "alt",
-						"ctrlKey": "ctrl",
-						"metaKey": "meta",
-						"shiftKey": "shift",
+						altKey: "alt",
+						ctrlKey: "ctrl",
+						metaKey: "meta",
+						shiftKey: "shift",
 					})
 					.setValue(this.plugin.settings.metaKey)
 					.onChange(async (value) => {
@@ -207,13 +274,13 @@ export default class AiAssistantSettingTab extends PluginSettingTab {
 					})
 			);
 		/**
-		 * 
+		 *
 		 * Image Assistant Options
-		 * 
+		 *
 		 */
 		containerEl.createEl("h3", { text: "Image Assistant" });
 		new Setting(containerEl)
-		.setName("Default location for generated images")
+			.setName("Default location for generated images")
 			.setDesc("Where generated images are stored.")
 			.addText((text) =>
 				text

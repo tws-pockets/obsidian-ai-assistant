@@ -225,3 +225,28 @@ li.obsidian-ai-assistant__history__prompt + li.obsidian-ai-assistant__history__p
   margin: 0;
   padding: 0;
 }
+
+
+.history__line {
+	display:flex;
+	max-width:100%;
+	
+	flex-flow: row nowrap;
+	
+}
+.history__line__message > textarea{ 
+	width:100%;
+	
+	resize : vertical;
+}
+.history__line__message {
+	margin-left:1em;
+	width:100%;
+	justify-content: end;
+	align-items: end;
+}
+.history__line__role {
+	display:flex;
+	width:auto;
+	align-content: start;
+}

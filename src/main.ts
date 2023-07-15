@@ -14,10 +14,12 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	maxTokens: 500,
 	replaceSelection: true,
 	alwaysShowPromptWithAnswer : false,
+	promptPrefix : [],
 	// Chat Behaviour
 	alwaysSaveChatHistory : true,
 	chatHistoryPath : "/ai/history/",
 	chatHistoryTemplate :  "",
+	chatPrefix : [],
 	sendOnEnter : false,
 	metaKey : "ctrlKey",
 	imgFolder: "AiAssistant/Assets",
@@ -57,9 +59,12 @@ export default class AiAssistantPlugin extends Plugin {
 		const cell = sendRow.createDiv();
 
 		const input = inputRow.createEl('textarea');
+
 		input.setAttrs({
+
 			rows : 5,
 			autogrow : true
+
 		})
 		input.addEventListener('keyup',(event) => {
 			console.log(`${event.key}`, {event})
@@ -121,6 +126,10 @@ export default class AiAssistantPlugin extends Plugin {
 		
 		this.isQuerying = true;
 		let answer = await this.openai.api_call([
+			...this.settings.promptPrefix.filter(({active})=>active).map(({content ,role}) => ({
+				content,
+				role
+			})),
 			{
 				role: "user",
 				content: prompt
