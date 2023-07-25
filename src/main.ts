@@ -3,7 +3,7 @@ import {
 	Notice,
 	Plugin,
 } from "obsidian";
-import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
+import {  ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
 import AiAssistantSettingTab, {AiAssistantSettings} from './AiAssistantSettings'
 import { ChatView } from "./ChatView";
@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
 	openai: OpenAI;
-	isQuerying : Boolean;
+	isQuerying : boolean;
 
 	build_api() {
 		this.openai = new OpenAI(
@@ -41,7 +41,7 @@ export default class AiAssistantPlugin extends Plugin {
 		);
 	}
 	togglePrompt(){
-		let wrapper = this.app.workspace.getLeaf().view.containerEl.find('.ai-assistant__wrapper')
+		const wrapper = this.app.workspace.getLeaf().view.containerEl.find('.ai-assistant__wrapper')
 		if (wrapper) {
 			wrapper.detach();
 		}else {
@@ -50,6 +50,7 @@ export default class AiAssistantPlugin extends Plugin {
 		}
 	}
 	showPrompt(){
+		console.error("ASD"); new Notice("Hey There", 1200)
 		const activeLeaf = this.app.workspace.getLeaf();
 		if (activeLeaf.view.containerEl.find('.ai-assistant__wrapper')) return;
 		const wrapper = document.createElement('div')
